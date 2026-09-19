@@ -69,6 +69,15 @@ drmdevice = executable(
   install : with_install_tests,
 )
 
+drmevent = executable(
+  'drmevent',
+  files('drmevent.c'),
+  include_directories : [inc_root, inc_drm],
+  link_with : libdrm,
+  c_args : libdrm_c_args,
+)
+
 test('hash', hash)
 test('drmsl', drmsl)
 test('drmdevice', drmdevice)
+test('drmevent', drmevent)
