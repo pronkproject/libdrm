@@ -1089,6 +1089,9 @@ drm_public int drmHandleEvent(int fd, drmEventContextPtr evctx)
 							seq->user_data);
 			break;
 		default:
+			if (evctx->version >= 5 && evctx->unhandled_event_handler)
+				evctx->unhandled_event_handler(
+					fd, e, evctx->unhandled_event_handler_data);
 			break;
 		}
 		i += e->length;

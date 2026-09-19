@@ -750,7 +750,7 @@ extern int drmSetMaster(int fd);
 extern int drmDropMaster(int fd);
 extern int drmIsMaster(int fd);
 
-#define DRM_EVENT_CONTEXT_VERSION 4
+#define DRM_EVENT_CONTEXT_VERSION 5
 
 typedef struct _drmEventContext {
 
@@ -781,6 +781,14 @@ typedef struct _drmEventContext {
 				 uint64_t sequence,
 				 uint64_t ns,
 				 uint64_t user_data);
+
+	/* Called for event types not interpreted by drmHandleEvent. The event
+	 * remains valid only for the duration of the callback. */
+	void (*unhandled_event_handler)(int fd,
+					const struct drm_event *event,
+					void *user_data);
+
+	void *unhandled_event_handler_data;
 } drmEventContext, *drmEventContextPtr;
 
 extern int drmHandleEvent(int fd, drmEventContextPtr evctx);
