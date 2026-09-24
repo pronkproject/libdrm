@@ -41,6 +41,19 @@
 #define U642VOID(x) ((void *)(unsigned long)(x))
 #define VOID2U64(x) ((uint64_t)(unsigned long)(x))
 
+#define DRM_EVENT_KMS_CONSTRAINTS_LIST_CHANGED 0x04
+
+struct drm_event_kms_constraints_list_changed {
+	struct drm_event base;
+	uint32_t crtc_id;
+	uint32_t flags;
+	uint64_t generation;
+	uint64_t reserved;
+};
+
+_Static_assert(sizeof(struct drm_event_kms_constraints_list_changed) == 32,
+	       "KMS constraints event layout must match the kernel UAPI");
+
 static inline int DRM_IOCTL(int fd, unsigned long cmd, void *arg)
 {
 	int ret = drmIoctl(fd, cmd, arg);
@@ -1019,6 +1032,7 @@ drm_public int drmHandleEvent(int fd, drmEventContextPtr evctx)
 	struct drm_event *e;
 	struct drm_event_vblank *vblank;
 	struct drm_event_crtc_sequence *seq;
+	struct drm_event_kms_constraints_list_changed constraints_event;
 	void *user_data;
 
 	/* The DRM read semantics guarantees that we always get only
@@ -1088,10 +1102,30 @@ drm_public int drmHandleEvent(int fd, drmEventContextPtr evctx)
 							seq->time_ns,
 							seq->user_data);
 			break;
+		case DRM_EVENT_KMS_CONSTRAINTS_LIST_CHANGED:
+			if (e->length != sizeof(constraints_event)) {
+				errno = EINVAL;
+				return -1;
+			}
+			memcpy(&constraints_event, e, sizeof(constraints_event));
+			if (constraints_event.crtc_id == 0 ||
+			    constraints_event.reserved != 0 ||
+			    (constraints_event.flags & ~DRM_KMS_CONSTRAINTS_LIST_CLOSED) != 0 ||
+			    (constraints_event.flags & DRM_KMS_CONSTRAINTS_LIST_CLOSED ?
+			     constraints_event.generation != 0 :
+			     constraints_event.generation == 0)) {
+				errno = EINVAL;
+				return -1;
+			}
+			if (evctx->version >= 5 &&
+			    evctx->kms_constraints_list_changed_handler)
+				evctx->kms_constraints_list_changed_handler(
+					fd, constraints_event.crtc_id,
+					constraints_event.flags,
+					constraints_event.generation,
+					evctx->kms_constraints_list_changed_handler_data);
+			break;
 		default:
-			if (evctx->version >= 5 && evctx->unhandled_event_handler)
-				evctx->unhandled_event_handler(
-					fd, e, evctx->unhandled_event_handler_data);
 			break;
 		}
 		i += e->length;

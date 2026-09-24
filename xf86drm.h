@@ -752,6 +752,8 @@ extern int drmIsMaster(int fd);
 
 #define DRM_EVENT_CONTEXT_VERSION 5
 
+#define DRM_KMS_CONSTRAINTS_LIST_CLOSED (1U << 0)
+
 typedef struct _drmEventContext {
 
 	/* This struct is versioned so we can add more pointers if we
@@ -782,13 +784,14 @@ typedef struct _drmEventContext {
 				 uint64_t ns,
 				 uint64_t user_data);
 
-	/* Called for event types not interpreted by drmHandleEvent. The event
-	 * remains valid only for the duration of the callback. */
-	void (*unhandled_event_handler)(int fd,
-					const struct drm_event *event,
-					void *user_data);
+	/* A changed list is advisory; query it again before selecting an entry. */
+	void (*kms_constraints_list_changed_handler)(int fd,
+						  uint32_t crtc_id,
+						  uint32_t flags,
+						  uint64_t generation,
+						  void *user_data);
 
-	void *unhandled_event_handler_data;
+	void *kms_constraints_list_changed_handler_data;
 } drmEventContext, *drmEventContextPtr;
 
 extern int drmHandleEvent(int fd, drmEventContextPtr evctx);
